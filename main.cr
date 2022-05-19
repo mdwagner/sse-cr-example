@@ -1,9 +1,8 @@
 require "http/server"
 
-channel = Channel(Int32).new
 stop = false
+other = false
 ws_instances = [] of HTTP::WebSocket
-x = false
 
 ws_handler = HTTP::WebSocketHandler.new do |ws, ctx|
   ws_instances << ws
@@ -29,10 +28,10 @@ server = HTTP::Server.new do |context|
         stop = false
         break
       end
-      if x
+      if other
         context.response.print "id:55\nevent: stop\ndata: STOPPING\n\n"
         context.response.flush
-        x = false
+        other = false
       end
     end
 
@@ -46,13 +45,14 @@ server = HTTP::Server.new do |context|
     end
     ws_instances.clear
 
-    x = true
+    other = true
 
     context.response.content_type = "text/plain"
     context.response.print "Sent"
   elsif context.request.path == "/ws"
     ws_handler.call(context)
   else
+    host_port = "127.0.0.1:8080"
     context.response.content_type = "text/html"
     context.response.print <<-HTML
     <!DOCTYPE html>
@@ -62,7 +62,7 @@ server = HTTP::Server.new do |context|
         <meta name="description" content="Our first page">
         <meta name="keywords" content="html tutorial template">
         <script type="module">
-          const ws = new WebSocket("ws://127.0.0.1:8080/ws");
+          const ws = new WebSocket("ws://#{host_port}/ws");
           ws.onmessage = function(e) {
             console.log(e.data);
           }
@@ -71,7 +71,7 @@ server = HTTP::Server.new do |context|
           const btn = document.querySelector('#btn');
           const fullStopBtn = document.querySelector('#full-stop-btn');
 
-          const stream = new EventSource('http://127.0.0.1:8080/event');
+          const stream = new EventSource('http://#{host_port}/event');
           stream.addEventListener('stop', function(e) {
             console.log('stop event fired', e);
           })
@@ -94,7 +94,7 @@ server = HTTP::Server.new do |context|
           }
           fullStopBtn.onclick = function(e) {
             e.preventDefault();
-            fetch('http://127.0.0.1:8080/send')
+            fetch('http://#{host_port}/send')
               .catch(function() {})
               .finally(function() {
                 console.log('fully closed');
